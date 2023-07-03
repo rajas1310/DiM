@@ -4,6 +4,7 @@ import time
 import random
 import argparse
 import numpy as np
+import pickle
 
 import torch
 import torch.nn as nn
@@ -31,6 +32,13 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError("Boolean value expected.")
+
+def gen_noise_batch(clas, domain, clip_embeddings):
+    key = f"a {domain} of a {clas}"
+    embedding = torch.tensor([clip_embeddings[key]]*args.batch_size)
+    noise = torch.normal(0, 1, (args.batch_size, args.dim_noise))
+    noisy_vectors_batch = torch.cat((embedding,noise), 1)
+    return noisy_vectors_batch
 
 
 def load_data(args):
@@ -456,6 +464,7 @@ if __name__ == "__main__":
     parser.add_argument("--eval-interval", type=int, default=10)
     parser.add_argument("--test-interval", type=int, default=200)
 
+<<<<<<< HEAD
     parser.add_argument("--data", type=str, default="cifar10")
     parser.add_argument(
         "--holdout-domain",
@@ -476,6 +485,22 @@ if __name__ == "__main__":
     parser.add_argument("--beta", type=float, default=1.0)
     parser.add_argument("--tag", type=str, default="test")
     parser.add_argument("--seed", type=int, default=3407)
+=======
+    parser.add_argument('--data', type=str, default='cifar10')
+    parser.add_argument('--clip-embeddings', type=str, default='/embeds/pacs/clip_embeddings.pickle')
+    parser.add_argument('--num-classes', type=int, default=10)
+    parser.add_argument('--data-dir', type=str, default='./data')
+    parser.add_argument('--output-dir', type=str, default='./results/')
+    parser.add_argument('--logs-dir', type=str, default='./logs/')
+    parser.add_argument('--aug-type', type=str, default='color_crop_cutout')
+    parser.add_argument('--mixup-net', type=str, default='cut')
+    parser.add_argument('--bias', type=str2bool, default=False)
+    parser.add_argument('--fc', type=str2bool, default=False)
+    parser.add_argument('--mix-p', type=float, default=-1.0)
+    parser.add_argument('--beta', type=float, default=1.0)
+    parser.add_argument('--tag', type=str, default='test')
+    parser.add_argument('--seed', type=int, default=3407)
+>>>>>>> refs/remotes/origin/main
     args = parser.parse_args()
 
     random.seed(args.seed)
@@ -499,6 +524,8 @@ if __name__ == "__main__":
     sys.stdout = Logger(os.path.join(args.logs_dir, "logs.txt"))
 
     print(args)
+
+    clip_embeddings = pickle.load(open(args.clip_embeddings, 'rb'))
 
     trainloader, testloader = load_data(args)
 
