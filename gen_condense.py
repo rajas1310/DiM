@@ -4,6 +4,7 @@ import time
 import random
 import argparse
 import numpy as np
+import pickle
 
 import torch
 import torch.nn as nn
@@ -32,6 +33,13 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
+def gen_noise_batch(clas, domain, clip_embeddings):
+    key = f"a {domain} of a {clas}"
+    embedding = torch.tensor([clip_embeddings[key]]*args.batch_size)
+    noise = torch.normal(0, 1, (args.batch_size, args.dim_noise))
+    noisy_vectors_batch = torch.cat((embedding,noise), 1)
+    return noisy_vectors_batch
 
 
 def load_data(args):
@@ -92,9 +100,6 @@ def load_data(args):
         testset = datasets.MNIST(args.data_dir, train=False, download=True,
                                  transform=transform_train)
 
-    elif args.data == "pacs":
-        pass
-    
     trainloader = torch.utils.data.DataLoader(
         trainset, batch_size=args.batch_size, shuffle=True,
         num_workers=args.num_workers, drop_last=True
@@ -393,8 +398,7 @@ if __name__ == '__main__':
     parser.add_argument('--test-interval', type=int, default=200)
 
     parser.add_argument('--data', type=str, default='cifar10')
-    parser.add_argument('--holdout-domain', type=str, default='cifar10', help="Must be one of `p`,`a`,`c`,`s` ")
-    
+    parser.add_argument('--clip-embeddings', type=str, default='/embeds/pacs/clip_embeddings.pickle')
     parser.add_argument('--num-classes', type=int, default=10)
     parser.add_argument('--data-dir', type=str, default='./data')
     parser.add_argument('--output-dir', type=str, default='./results/')
@@ -430,6 +434,8 @@ if __name__ == '__main__':
     sys.stdout = Logger(os.path.join(args.logs_dir, 'logs.txt'))
 
     print(args)
+
+    clip_embeddings = pickle.load(open(args.clip_embeddings, 'rb'))
 
     trainloader, testloader = load_data(args)
 
