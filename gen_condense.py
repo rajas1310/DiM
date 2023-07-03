@@ -92,6 +92,9 @@ def load_data(args):
         testset = datasets.MNIST(args.data_dir, train=False, download=True,
                                  transform=transform_train)
 
+    elif args.data == "pacs":
+        pass
+    
     trainloader = torch.utils.data.DataLoader(
         trainset, batch_size=args.batch_size, shuffle=True,
         num_workers=args.num_workers, drop_last=True
@@ -390,6 +393,8 @@ if __name__ == '__main__':
     parser.add_argument('--test-interval', type=int, default=200)
 
     parser.add_argument('--data', type=str, default='cifar10')
+    parser.add_argument('--holdout-domain', type=str, default='cifar10', help="Must be one of `p`,`a`,`c`,`s` ")
+    
     parser.add_argument('--num-classes', type=int, default=10)
     parser.add_argument('--data-dir', type=str, default='./data')
     parser.add_argument('--output-dir', type=str, default='./results/')
