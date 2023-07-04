@@ -463,8 +463,6 @@ if __name__ == "__main__":
     parser.add_argument("--print-freq", type=int, default=50)
     parser.add_argument("--eval-interval", type=int, default=10)
     parser.add_argument("--test-interval", type=int, default=200)
-
-<<<<<<< HEAD
     parser.add_argument("--data", type=str, default="cifar10")
     parser.add_argument(
         "--holdout-domain",
@@ -474,6 +472,8 @@ if __name__ == "__main__":
     )
 
     parser.add_argument("--num-classes", type=int, default=10)
+    parser.add_argument('--clip-embeddings', type=str, default='/embeds/pacs/clip_embeddings.pickle')
+    parser.add_argument('--num-classes', type=int, default=10)
     parser.add_argument("--data-dir", type=str, default="./data")
     parser.add_argument("--output-dir", type=str, default="./results/")
     parser.add_argument("--logs-dir", type=str, default="./logs/")
@@ -485,22 +485,7 @@ if __name__ == "__main__":
     parser.add_argument("--beta", type=float, default=1.0)
     parser.add_argument("--tag", type=str, default="test")
     parser.add_argument("--seed", type=int, default=3407)
-=======
-    parser.add_argument('--data', type=str, default='cifar10')
-    parser.add_argument('--clip-embeddings', type=str, default='/embeds/pacs/clip_embeddings.pickle')
-    parser.add_argument('--num-classes', type=int, default=10)
-    parser.add_argument('--data-dir', type=str, default='./data')
-    parser.add_argument('--output-dir', type=str, default='./results/')
-    parser.add_argument('--logs-dir', type=str, default='./logs/')
-    parser.add_argument('--aug-type', type=str, default='color_crop_cutout')
-    parser.add_argument('--mixup-net', type=str, default='cut')
-    parser.add_argument('--bias', type=str2bool, default=False)
-    parser.add_argument('--fc', type=str2bool, default=False)
-    parser.add_argument('--mix-p', type=float, default=-1.0)
-    parser.add_argument('--beta', type=float, default=1.0)
-    parser.add_argument('--tag', type=str, default='test')
-    parser.add_argument('--seed', type=int, default=3407)
->>>>>>> refs/remotes/origin/main
+
     args = parser.parse_args()
 
     random.seed(args.seed)
