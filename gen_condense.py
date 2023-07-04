@@ -241,6 +241,8 @@ def diffaug(args, device="cuda"):
         normalize = Normalize((0.286,), (0.353,), device="cuda")
     elif args.data == "mnist":
         normalize = Normalize((0.131,), (0.308,), device="cuda")
+    else:
+        normalize = torch.nn.Identity()
     print("Augmentataion Matching: ", aug_type)
     augment = DiffAug(strategy=aug_type, batch=True)
     aug_batch = transforms.Compose([normalize, augment])
