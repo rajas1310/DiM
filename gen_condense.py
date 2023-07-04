@@ -5,6 +5,7 @@ import random
 import argparse
 import numpy as np
 import pickle
+import random
 
 import torch
 import torch.nn as nn
@@ -20,7 +21,7 @@ import models.densenet_cifar as DN
 from gan_model import Generator, Discriminator
 from utils import AverageMeter, accuracy, Normalize, Logger, rand_bbox
 from augment import DiffAug
-from data import get_pacs_datasets
+
 
 def str2bool(v):
     """Cast string to boolean"""
@@ -33,13 +34,31 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError("Boolean value expected.")
 
-def gen_noise_batch(clas, domain, clip_embeddings):
-    key = f"a {domain} of a {clas}"
-    embedding = torch.tensor([clip_embeddings[key]]*args.batch_size)
-    noise = torch.normal(0, 1, (args.batch_size, args.dim_noise))
-    noisy_vectors_batch = torch.cat((embedding,noise), 1)
-    return noisy_vectors_batch
+def gen_noisy_batch(args, hold_out_domain, clip_embeddings):
+    # hold_out_domain : 'p', 'a', 'c', 's' 
+    # clip_embeddings : dict
+    domain_to_foldername = {
+            "p": "photo",
+            "a": "painting",
+            "c": "cartoon",
+            "s": "sketch"
+        }
+    count = 0
+    embeddings = []
+    keys = clip_embeddings.keys()    # key = f"a {DOMAIN} of a {CLASS}"
 
+    while count != args.batch_size:
+        key = random.sample(keys, 1)[0]
+        if key.split(" ")[1] != domain_to_foldername[hold_out_domain]:
+            # print(key)
+            count += 1
+            embeddings.append(clip_embeddings[key])
+
+    assert len(embeddings) == args.batch_size    
+    embeddings = torch.stack((embeddings))
+    noise = torch.normal(0, 1, (args.batch_size, args.dim_noise))
+    noisy_vectors_batch = torch.cat((embeddings,noise), 1)
+    return noisy_vectors_batch
 
 def load_data(args):
     """Obtain data"""
@@ -110,8 +129,7 @@ def load_data(args):
         )
 
     elif args.data == "pacs":
-        trainset, testset = get_pacs_datasets(args.data_dir, args.holdout_domain)
-        
+        pass
 
     trainloader = torch.utils.data.DataLoader(
         trainset,
@@ -451,7 +469,7 @@ def validate(args, generator, testloader, criterion, aug_rand):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--ipc", type=int, default=50)
-    parser.add_argument("--batch-size", type=int, default=128)
+    parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=150)
     parser.add_argument("--epochs-eval", type=int, default=1000)
     parser.add_argument("--lr", type=float, default=1e-4)
@@ -468,13 +486,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--holdout-domain",
         type=str,
-        default="cifar10",
+        default="p",
         help="Must be one of `p`,`a`,`c`,`s` ",
     )
 
     parser.add_argument("--num-classes", type=int, default=10)
-    parser.add_argument('--clip-embeddings', type=str, default='/embeds/pacs/clip_embeddings.pickle')
-    parser.add_argument('--num-classes', type=int, default=10)
+    parser.add_argument('--clip-embeddings', type=str, default='/content/DiM/embeds/pacs/clip_embeddings.pickle')
     parser.add_argument("--data-dir", type=str, default="./data")
     parser.add_argument("--output-dir", type=str, default="./results/")
     parser.add_argument("--logs-dir", type=str, default="./logs/")
@@ -486,7 +503,6 @@ if __name__ == "__main__":
     parser.add_argument("--beta", type=float, default=1.0)
     parser.add_argument("--tag", type=str, default="test")
     parser.add_argument("--seed", type=int, default=3407)
-
     args = parser.parse_args()
 
     random.seed(args.seed)
