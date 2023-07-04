@@ -20,7 +20,7 @@ import models.densenet_cifar as DN
 from gan_model import Generator, Discriminator
 from utils import AverageMeter, accuracy, Normalize, Logger, rand_bbox
 from augment import DiffAug
-
+from data import get_pacs_datasets
 
 def str2bool(v):
     """Cast string to boolean"""
@@ -110,7 +110,8 @@ def load_data(args):
         )
 
     elif args.data == "pacs":
-        pass
+        trainset, testset = get_pacs_datasets(args.data_dir, args.holdout_domain)
+        
 
     trainloader = torch.utils.data.DataLoader(
         trainset,

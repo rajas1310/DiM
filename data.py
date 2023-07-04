@@ -5,19 +5,30 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from PIL import Image
 
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, ConcatDataset
 
 from utils import set_seed
 
-
-
-class PACS(Dataset):
-    def __init__(self, data_path, domain, mode="train", test_split=0.2, seed=42) -> None:
+class ImageDataset(Dataset):
+    def __init__(self, image_list, label_list):
         super().__init__()
+        self.image_list = image_list
+        self.label_list = label_list
+
+    def __len__(self):
+       return len(self.label_list)
+
+    def __getitem__(self, idx):
+        img = Image.open(self.image_list[idx])
+        label = self.label_list[idx]
+        return img, label
+
+
+class PACS:
+    def __init__(self, data_path, domain, test_split=0.2, seed=42) -> None:
         set_seed(seed)
         self.path = data_path
         self.domain = domain
-        self.mode = mode
         self.label2int = {
             "dog": 0,
             "elephant": 1,
@@ -45,24 +56,36 @@ class PACS(Dataset):
         self.train_labels = list(map(label_fn, self.train_images))
         self.test_labels = list(map(label_fn, self.test_images))
 
-    def __len__(self):
-        if self.mode == "train":
-            return len(self.train_images)
+    def get_datasets(self):
+        return ImageDataset(self.train_images, self.train_labels), ImageDataset(self.test_images, self.test_labels)
+        
+
+
+def get_pacs_datasets(data_path, holdout_domain, test_split=0.2, seed=4,):
+    domain_to_foldername = {
+        "p": "photo",
+        "a": "art_painting",
+        "c": "cartoon",
+        "s": "sketch"
+    }
+
+    train_dss = list()
+    test_dss = list()
+
+    for domain in domain_to_foldername:
+        if domain == holdout_domain:
+            pass
         else:
-            return len(self.test_images)
-
-    def __getitem__(self, idx):
-        self.image_list = self.train_images if self.mode == "train" else self.test_images
-        self.label_list = self.train_labels if self.mode == "train" else self.test_labels
-        img = Image.open(self.image_list[idx])
-        label = self.label_list[idx]
-        return img, label
-
-
+            pacs = PACS(data_path, domain, test_split=test_split, seed=seed)
+            train_ds, test_ds = pacs.get_datasets()
+            train_dss.append(train_ds)
+            test_dss.append(test_ds)
+    
+    return ConcatDataset(train_dss), ConcatDataset(test_dss)
 
 # TODO: create a PACS dataset class to load data of a given domain and split
 
-if __name__ == "__main__":
-    pacs = PACS(data_path="/content/data/PACS", domain="p")
-    print(pacs[42])
+# if __name__ == "__main__":
+#     pacs = PACS(data_path="/content/data/PACS", domain="p")
+#     print(pacs[42])
     
