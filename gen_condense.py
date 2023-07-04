@@ -21,7 +21,7 @@ import models.densenet_cifar as DN
 from gan_model import Generator, Discriminator
 from utils import AverageMeter, accuracy, Normalize, Logger, rand_bbox
 from augment import DiffAug
-
+from data import get_pacs_datasets
 
 def str2bool(v):
     """Cast string to boolean"""
@@ -34,7 +34,7 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError("Boolean value expected.")
 
-def gen_noisy_batch(args, hold_out_domain, clip_embeddings):
+def gen_noisy_batch(args, clip_embeddings):
     # hold_out_domain : 'p', 'a', 'c', 's' 
     # clip_embeddings : dict
     domain_to_foldername = {
@@ -49,15 +49,15 @@ def gen_noisy_batch(args, hold_out_domain, clip_embeddings):
 
     while count != args.batch_size:
         key = random.sample(keys, 1)[0]
-        if key.split(" ")[1] != domain_to_foldername[hold_out_domain]:
+        if key.split(" ")[1] != domain_to_foldername[args.holdout_domain]:
             # print(key)
             count += 1
             embeddings.append(clip_embeddings[key])
 
     assert len(embeddings) == args.batch_size    
     embeddings = torch.stack((embeddings))
-    noise = torch.normal(0, 1, (args.batch_size, args.dim_noise))
-    noisy_vectors_batch = torch.cat((embeddings,noise), 1)
+    noise = torch.normal(0, 1, (args.batch_size, args.dim_noise - 512))
+    noisy_vectors_batch = torch.cat((embeddings, noise), 1)
     return noisy_vectors_batch
 
 def load_data(args):
@@ -129,7 +129,7 @@ def load_data(args):
         )
 
     elif args.data == "pacs":
-        pass
+        trainset, testset = get_pacs_datasets(args.data_dir, args.holdout_domain, test_split=args.test_split, seed=args.seed)
 
     trainloader = torch.utils.data.DataLoader(
         trainset,
@@ -265,6 +265,7 @@ def train(
     criterion,
     aug,
     aug_rand,
+    clip_embeddings
 ):
     """The main training function for the generator"""
     generator.train()
@@ -282,12 +283,7 @@ def train(
         optim_g.zero_grad()
 
         # obtain the noise with one-hot class labels
-        noise = torch.normal(0, 1, (args.batch_size, args.dim_noise))
-        lab_onehot = torch.zeros((args.batch_size, args.num_classes))
-        lab_onehot[torch.arange(args.batch_size), lab_real] = 1
-        noise[torch.arange(args.batch_size), : args.num_classes] = lab_onehot[
-            torch.arange(args.batch_size)
-        ]
+        noise = gen_noisy_batch(args, clip_embeddings)
         noise = noise.cuda()
 
         img_syn = generator(noise)
@@ -303,12 +299,13 @@ def train(
         discriminator.train()
         optim_d.zero_grad()
         lab_syn = torch.randint(args.num_classes, (args.batch_size,))
-        noise = torch.normal(0, 1, (args.batch_size, args.dim_noise))
-        lab_onehot = torch.zeros((args.batch_size, args.num_classes))
-        lab_onehot[torch.arange(args.batch_size), lab_syn] = 1
-        noise[torch.arange(args.batch_size), : args.num_classes] = lab_onehot[
-            torch.arange(args.batch_size)
-        ]
+        # noise = torch.normal(0, 1, (args.batch_size, args.dim_noise))
+        # lab_onehot = torch.zeros((args.batch_size, args.num_classes))
+        # lab_onehot[torch.arange(args.batch_size), lab_syn] = 1
+        # noise[torch.arange(args.batch_size), : args.num_classes] = lab_onehot[
+        #     torch.arange(args.batch_size)
+        # ]
+        noise = gen_noisy_batch(args, clip_embeddings)
         noise = noise.cuda()
         lab_syn = lab_syn.cuda()
 
@@ -376,7 +373,7 @@ def test(args, model, testloader, criterion):
     return top1.avg, top5.avg, losses.avg
 
 
-def validate(args, generator, testloader, criterion, aug_rand):
+def validate(args, generator, testloader, criterion, aug_rand, clip_embeddings):
     """Validate the generator performance"""
     all_best_top1 = []
     all_best_top5 = []
@@ -401,12 +398,7 @@ def validate(args, generator, testloader, criterion, aug_rand):
             for batch_idx in range(10 * args.ipc // args.batch_size + 1):
                 # obtain pseudo samples with the generator
                 lab_syn = torch.randint(args.num_classes, (args.batch_size,))
-                noise = torch.normal(0, 1, (args.batch_size, args.dim_noise))
-                lab_onehot = torch.zeros((args.batch_size, args.num_classes))
-                lab_onehot[torch.arange(args.batch_size), lab_syn] = 1
-                noise[torch.arange(args.batch_size), : args.num_classes] = lab_onehot[
-                    torch.arange(args.batch_size)
-                ]
+                noise = noise = gen_noisy_batch(args, clip_embeddings)
                 noise = noise.cuda()
                 lab_syn = lab_syn.cuda()
 
@@ -477,22 +469,21 @@ if __name__ == "__main__":
     parser.add_argument("--momentum", type=float, default=0.9)
     parser.add_argument("--weight-decay", type=float, default=5e-4)
     parser.add_argument("--eval-model", type=str, nargs="+", default=["convnet"])
-    parser.add_argument("--dim-noise", type=int, default=100)
+    parser.add_argument("--dim-noise", type=int, default=768)  # 512 + 256
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--print-freq", type=int, default=50)
     parser.add_argument("--eval-interval", type=int, default=10)
     parser.add_argument("--test-interval", type=int, default=200)
-    parser.add_argument("--data", type=str, default="cifar10")
+    parser.add_argument("--data", type=str, default="pacs")
     parser.add_argument(
         "--holdout-domain",
         type=str,
         default="p",
         help="Must be one of `p`,`a`,`c`,`s` ",
     )
-
-    parser.add_argument("--num-classes", type=int, default=10)
+    parser.add_argument("--num-classes", type=int, default=7)
     parser.add_argument('--clip-embeddings', type=str, default='/content/DiM/embeds/pacs/clip_embeddings.pickle')
-    parser.add_argument("--data-dir", type=str, default="./data")
+    parser.add_argument("--data-dir", type=str, default="/content/data/PACS")
     parser.add_argument("--output-dir", type=str, default="./results/")
     parser.add_argument("--logs-dir", type=str, default="./logs/")
     parser.add_argument("--aug-type", type=str, default="color_crop_cutout")
@@ -501,6 +492,7 @@ if __name__ == "__main__":
     parser.add_argument("--fc", type=str2bool, default=False)
     parser.add_argument("--mix-p", type=float, default=-1.0)
     parser.add_argument("--beta", type=float, default=1.0)
+    parser.add_argument("--test-split", type=float, default=0.2)
     parser.add_argument("--tag", type=str, default="test")
     parser.add_argument("--seed", type=int, default=3407)
     args = parser.parse_args()
@@ -557,17 +549,13 @@ if __name__ == "__main__":
             criterion,
             aug,
             aug_rand,
+            clip_embeddings
         )
 
         # save image for visualization
         generator.eval()
-        test_label = torch.tensor(list(range(10)) * 10)
-        test_noise = torch.normal(0, 1, (100, 100))
-        lab_onehot = torch.zeros((100, args.num_classes))
-        lab_onehot[torch.arange(100), test_label] = 1
-        test_noise[torch.arange(100), : args.num_classes] = lab_onehot[
-            torch.arange(100)
-        ]
+        test_label = torch.tensor(list(range(args.num_classes)) * 10)
+        test_noise = gen_noisy_batch(args, clip_embeddings)
         test_noise = test_noise.cuda()
         test_img_syn = (generator(test_noise) + 1.0) / 2.0
         test_img_syn = make_grid(test_img_syn, nrow=10)
@@ -590,7 +578,7 @@ if __name__ == "__main__":
             )
             print("img and data saved!")
 
-            top1s, top5s = validate(args, generator, testloader, criterion, aug_rand)
+            top1s, top5s = validate(args, generator, testloader, criterion, aug_rand, clip_embeddings)
             for e_idx, e_model in enumerate(args.eval_model):
                 if top1s[e_idx] > best_top1s[e_idx]:
                     best_top1s[e_idx] = top1s[e_idx]

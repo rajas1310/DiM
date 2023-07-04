@@ -4,7 +4,7 @@ import os
 import numpy as np
 from sklearn.model_selection import train_test_split
 from PIL import Image
-
+from torchvision import transforms
 from torch.utils.data import Dataset, ConcatDataset
 
 from utils import set_seed
@@ -14,12 +14,13 @@ class ImageDataset(Dataset):
         super().__init__()
         self.image_list = image_list
         self.label_list = label_list
+        self.transform = transforms.Compose([transforms.ToTensor()])
 
     def __len__(self):
        return len(self.label_list)
 
     def __getitem__(self, idx):
-        img = Image.open(self.image_list[idx])
+        img = self.transform(Image.open(self.image_list[idx]))
         label = self.label_list[idx]
         return img, label
 
@@ -61,7 +62,7 @@ class PACS:
         
 
 
-def get_pacs_datasets(data_path, holdout_domain, test_split=0.2, seed=4,):
+def get_pacs_datasets(data_path, holdout_domain, test_split=0.2, seed=42):
     domain_to_foldername = {
         "p": "photo",
         "a": "art_painting",
