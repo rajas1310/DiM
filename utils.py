@@ -17,6 +17,24 @@ def dist_l2(data, target):
         target**2).sum(-1).unsqueeze(0) - 2 * torch.matmul(data, target.transpose(1, 0))
     return dist
 
+def set_seed(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
+def trap(message=""):
+    raise ValueError(message)
+
+
+def debug(message=""):
+    if input("debugging, press `y` to continue >> ") == "y":
+        return 0
+    else:
+        debug()
+
 
 def get_time():
     return str(time.strftime("[%Y-%m-%d %H:%M:%S]", time.localtime()))
