@@ -1,0 +1,9 @@
+Namespace(ipc=50, batch_size=32, epochs=150, epochs_eval=1000, lr=0.0001, eval_lr=0.01, momentum=0.9, weight_decay=0.0005, eval_model=['convnet'], dim_noise=768, num_workers=4, print_freq=50, eval_interval=10, test_interval=200, data='pacs', holdout_domain='p', num_classes=7, clip_embeddings='/content/DiM/embeds/pacs/clip_embeddings.pickle', data_dir='/content/data/PACS', output_dir='./results/test', logs_dir='./logs/test', aug_type='color_crop_cutout', mixup_net='cut', bias=False, fc=False, mix_p=-1.0, beta=1.0, test_split=0.2, tag='test', seed=3407)
+Augmentataion Matching:  color_crop_cutout
+Augmentataion Net update:  color_crop
+####### Epoch 0
+[Train Epoch 0 Iter 50] G Loss: 2.167(2.419) D Loss: 9.275(6.477) D Acc: 9.375(15.438)
+[Train Epoch 0 Iter 100] G Loss: 2.339(2.120) D Loss: 3.597(5.851) D Acc: 6.250(17.219)
+[Train Epoch 0 Iter 150] G Loss: -1.179(1.953) D Loss: 5.880(5.721) D Acc: 18.750(17.479)
+[Train Epoch 0 Iter 200] G Loss: 4.088(1.726) D Loss: 4.355(5.711) D Acc: 28.125(18.000)
+####### Epoch 1

@@ -525,8 +525,8 @@ if __name__ == "__main__":
 
     trainloader, testloader = load_data(args)
 
-    generator = Generator(args).cuda()
-    discriminator = Discriminator(args).cuda()
+    generator = Generator(args.dim_noise).cuda()
+    discriminator = Discriminator(args.num_classes).cuda()
 
     optim_g = torch.optim.Adam(generator.parameters(), lr=args.lr, betas=(0, 0.9))
     optim_d = torch.optim.Adam(discriminator.parameters(), lr=args.lr, betas=(0, 0.9))
@@ -538,6 +538,7 @@ if __name__ == "__main__":
     best_top5s = np.zeros((len(args.eval_model),))
     best_epochs = np.zeros((len(args.eval_model),))
     for epoch in range(args.epochs):
+        print(f"####### Epoch {epoch}")
         generator.train()
         discriminator.train()
         train(

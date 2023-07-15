@@ -14,7 +14,7 @@ class ImageDataset(Dataset):
         super().__init__()
         self.image_list = image_list
         self.label_list = label_list
-        self.transform = transforms.Compose([transforms.ToTensor(), Resize(128)])
+        self.transform = transforms.Compose([transforms.ToTensor(), transforms.Resize(128)])
 
     def __len__(self):
        return len(self.label_list)

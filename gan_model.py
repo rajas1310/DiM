@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 class Discriminator(nn.Module):
 
-    def __init__(self):
+    def __init__(self, num_classes):
         super(Discriminator, self).__init__()
         # if args.data == 'mnist' or args.data == 'fashion':
         #     self.in_channels = 1
@@ -56,7 +56,7 @@ class Discriminator(nn.Module):
         # [B, 196, 1, 1]
 
         self.fc1 = nn.Linear(196, 1)
-        self.fc10 = nn.Linear(196, 10)
+        self.fc10 = nn.Linear(196, num_classes)
 
     def forward(self, x, print_size=False):
         if print_size:
@@ -141,9 +141,9 @@ class Discriminator(nn.Module):
 
 class Generator(nn.Module):
 
-    def __init__(self, args=None):
+    def __init__(self, dim_noise):
         super(Generator, self).__init__()
-        self.fc1 = nn.Linear(768, 196*4*4) ########## Change back to args.dim_noise
+        self.fc1 = nn.Linear(dim_noise, 196*4*4) ########## Change back to args.dim_noise
         self.bn0 = nn.BatchNorm1d(196*4*4)
         self.relu0 = nn.ReLU()
 
@@ -192,7 +192,7 @@ class Generator(nn.Module):
         # if args.data == 'mnist' or args.data == 'fashion':
         #     self.conv8 = nn.Conv2d(196, 1, kernel_size=3, stride=1, padding=1)
         # else:
-        #     self.conv8 = nn.Conv2d(196, 3, kernel_size=3, stride=1, padding=1)
+        self.conv_last = nn.Conv2d(196, 3, kernel_size=3, stride=1, padding=1)
         # bn and relu are not applied after conv8
 
         self.sigmoid = nn.Sigmoid()
@@ -282,21 +282,22 @@ class Generator(nn.Module):
         if print_size:
             print(x.size())
 
+        x = self.conv_last(x)
         x = self.sigmoid(x)
 
         if print_size:
-            print("output (tanh) size: {}".format(x.size()))
+            print("output size: {}".format(x.size()))
 
         return x
 
 
 if __name__ == '__main__':
-    net1 = Discriminator()
+    net1 = Discriminator(10)
     print(net1)
     x = torch.randn(10,3,128,128)
     fc1_out, fc10_out = net1(x, print_size=True)
 
-    net2 = Generator()
+    net2 = Generator(768)
     print(net2)
     x = torch.randn(10, 768)
     gen_out = net2(x, print_size=True)
