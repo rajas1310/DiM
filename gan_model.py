@@ -7,16 +7,19 @@ import torch.nn.functional as F
 
 class Discriminator(nn.Module):
 
-    def __init__(self, args):
+    def __init__(self):
         super(Discriminator, self).__init__()
-        if args.data == 'mnist' or args.data == 'fashion':
-            self.in_channels = 1
-            self.conv1 = nn.Conv2d(1, 196, kernel_size=3, stride=1, padding=1)
-            size = 28
-        else:
-            self.in_channels = 3
-            self.conv1 = nn.Conv2d(3, 196, kernel_size=3, stride=1, padding=1)
-            size = 32
+        # if args.data == 'mnist' or args.data == 'fashion':
+        #     self.in_channels = 1
+        #     self.conv1 = nn.Conv2d(1, 196, kernel_size=3, stride=1, padding=1)
+        #     size = 28
+        # else:
+        self.in_channels = 3
+        self.conv1 = nn.Conv2d(3, 196, kernel_size=3, stride=1, padding=1)
+        size = 128
+        
+        
+
         self.ln1 = nn.LayerNorm(normalized_shape=[196, size, size])
         self.lrelu1 = nn.LeakyReLU()
 
@@ -45,10 +48,13 @@ class Discriminator(nn.Module):
         self.lrelu7 = nn.LeakyReLU()
 
         self.conv8 = nn.Conv2d(196, 196, kernel_size=3, stride=2, padding=1)
-        self.ln8 = nn.LayerNorm(normalized_shape=[196, 4, 4])
+        self.ln8 = nn.LayerNorm(normalized_shape=[196, size // 8, size // 8])
         self.lrelu8 = nn.LeakyReLU()
+        # [B, 196, size // 8, size // 8]
 
-        self.pool = nn.MaxPool2d(kernel_size=4, stride=4, padding=0)
+        self.pool = nn.AdaptiveMaxPool2d(1) # global max pool
+        # [B, 196, 1, 1]
+
         self.fc1 = nn.Linear(196, 1)
         self.fc10 = nn.Linear(196, 10)
 
@@ -113,6 +119,7 @@ class Discriminator(nn.Module):
             print(x.size())
 
         x = self.pool(x)
+        x = x.squeeze()
 
         if print_size:
             print(x.size())
@@ -134,16 +141,16 @@ class Discriminator(nn.Module):
 
 class Generator(nn.Module):
 
-    def __init__(self, args):
+    def __init__(self, args=None):
         super(Generator, self).__init__()
-        self.fc1 = nn.Linear(args.dim_noise, 196*4*4)
+        self.fc1 = nn.Linear(768, 196*4*4) ########## Change back to args.dim_noise
         self.bn0 = nn.BatchNorm1d(196*4*4)
         self.relu0 = nn.ReLU()
 
-        if args.data == 'mnist' or args.data == 'fashion':
-            self.conv1 = nn.ConvTranspose2d(196, 196, kernel_size=3, stride=2, padding=1)
-        else:
-            self.conv1 = nn.ConvTranspose2d(196, 196, kernel_size=4, stride=2, padding=1)
+        # if args.data == 'mnist' or args.data == 'fashion':
+        #     self.conv1 = nn.ConvTranspose2d(196, 196, kernel_size=3, stride=2, padding=1)
+        # else:
+        self.conv1 = nn.ConvTranspose2d(196, 196, kernel_size=4, stride=2, padding=1)
         self.bn1 = nn.BatchNorm2d(196)
         self.relu1 = nn.ReLU()
 
@@ -174,13 +181,21 @@ class Generator(nn.Module):
         self.bn7 = nn.BatchNorm2d(196)
         self.relu7 = nn.ReLU()
 
-        if args.data == 'mnist' or args.data == 'fashion':
-            self.conv8 = nn.Conv2d(196, 1, kernel_size=3, stride=1, padding=1)
-        else:
-            self.conv8 = nn.Conv2d(196, 3, kernel_size=3, stride=1, padding=1)
+        self.conv8 = nn.ConvTranspose2d(196, 196, kernel_size=4, stride=2, padding=1)
+        self.bn8 = nn.BatchNorm2d(196)
+        self.relu8 = nn.ReLU()
+
+        self.conv9 = nn.ConvTranspose2d(196, 196, kernel_size=4, stride=2, padding=1)
+        self.bn9 = nn.BatchNorm2d(196)
+        self.relu9 = nn.ReLU()
+
+        # if args.data == 'mnist' or args.data == 'fashion':
+        #     self.conv8 = nn.Conv2d(196, 1, kernel_size=3, stride=1, padding=1)
+        # else:
+        #     self.conv8 = nn.Conv2d(196, 3, kernel_size=3, stride=1, padding=1)
         # bn and relu are not applied after conv8
 
-        self.tanh = nn.Tanh()
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x, print_size=False):
         if print_size:
@@ -246,14 +261,28 @@ class Generator(nn.Module):
 
         if print_size:
             print(x.size())
-
+        
         x = self.conv8(x)
+        x = self.bn8(x)
+        x = self.relu8(x)
+
+        if print_size:
+            print(x.size())
+
+        x = self.conv9(x)
+        x = self.bn9(x)
+        x = self.relu9(x)
+
+        if print_size:
+            print(x.size())
+
+        # x = self.conv8(x)
         # bn and relu are not applied after conv8
 
         if print_size:
             print(x.size())
 
-        x = self.tanh(x)
+        x = self.sigmoid(x)
 
         if print_size:
             print("output (tanh) size: {}".format(x.size()))
@@ -264,10 +293,10 @@ class Generator(nn.Module):
 if __name__ == '__main__':
     net1 = Discriminator()
     print(net1)
-    x = torch.randn(10,3,32,32)
+    x = torch.randn(10,3,128,128)
     fc1_out, fc10_out = net1(x, print_size=True)
 
     net2 = Generator()
     print(net2)
-    x = torch.randn(10, 100)
+    x = torch.randn(10, 768)
     gen_out = net2(x, print_size=True)
