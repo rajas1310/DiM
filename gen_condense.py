@@ -484,8 +484,8 @@ if __name__ == "__main__":
         help="Must be one of `p`,`a`,`c`,`s` ",
     )
     parser.add_argument("--num-classes", type=int, default=7)
-    parser.add_argument('--clip-embeddings', type=str, default='/content/DiM/embeds/pacs/clip_embeddings.pickle')
-    parser.add_argument("--data-dir", type=str, default="/content/data/PACS")
+    parser.add_argument('--clip-embeddings', type=str, default='./DiM/embeds/pacs/clip_embeddings.pickle')
+    parser.add_argument("--data-dir", type=str, default="./data/PACS")
     parser.add_argument("--output-dir", type=str, default="./results/")
     parser.add_argument("--logs-dir", type=str, default="./logs/")
     parser.add_argument("--aug-type", type=str, default="color_crop_cutout")
