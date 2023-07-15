@@ -568,30 +568,30 @@ if __name__ == "__main__":
         )
         generator.train()
 
-        if (epoch + 1) % args.eval_interval == 0:
-            model_dict = {
-                "generator": generator.state_dict(),
-                "discriminator": discriminator.state_dict(),
-                "optim_g": optim_g.state_dict(),
-                "optim_d": optim_d.state_dict(),
-            }
-            torch.save(
-                model_dict,
-                os.path.join(args.output_dir, "model_dict_{}.pth".format(epoch)),
-            )
-            print("img and data saved!")
+        # if (epoch + 1) % args.eval_interval == 0:
+        model_dict = {
+            "generator": generator.state_dict(),
+            "discriminator": discriminator.state_dict(),
+            "optim_g": optim_g.state_dict(),
+            "optim_d": optim_d.state_dict(),
+        }
+        torch.save(
+            model_dict,
+            os.path.join(args.output_dir, "model_dict_{}.pth".format(epoch)),
+        )
+        print("img and data saved!")
 
-            top1s, top5s = validate(args, generator, testloader, criterion, aug_rand, clip_embeddings)
-            for e_idx, e_model in enumerate(args.eval_model):
-                if top1s[e_idx] > best_top1s[e_idx]:
-                    best_top1s[e_idx] = top1s[e_idx]
-                    best_top5s[e_idx] = top5s[e_idx]
-                    best_epochs[e_idx] = epoch
-                print(
-                    "Current Best Epoch for {}: {}, Top1: {:.3f}, Top5: {:.3f}".format(
-                        e_model,
-                        best_epochs[e_idx],
-                        best_top1s[e_idx],
-                        best_top5s[e_idx],
-                    )
+        top1s, top5s = validate(args, generator, testloader, criterion, aug_rand, clip_embeddings)
+        for e_idx, e_model in enumerate(args.eval_model):
+            if top1s[e_idx] > best_top1s[e_idx]:
+                best_top1s[e_idx] = top1s[e_idx]
+                best_top5s[e_idx] = top5s[e_idx]
+                best_epochs[e_idx] = epoch
+            print(
+                "Current Best Epoch for {}: {}, Top1: {:.3f}, Top5: {:.3f}".format(
+                    e_model,
+                    best_epochs[e_idx],
+                    best_top1s[e_idx],
+                    best_top5s[e_idx],
                 )
+            )
