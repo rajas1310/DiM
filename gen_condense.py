@@ -409,7 +409,7 @@ def validate(args, generator, testloader, criterion, aug_rand, clip_embeddings):
 
                 with torch.no_grad():
                     img_syn = generator(noise)
-                    img_syn = aug_rand((img_syn + 1.0) / 2.0)
+                    img_syn = aug_rand(img_syn)
 
                 if np.random.rand(1) < args.mix_p and args.mixup_net == "cut":
                     lam = np.random.beta(args.beta, args.beta)
@@ -563,7 +563,7 @@ if __name__ == "__main__":
         test_label = torch.tensor(list(range(args.num_classes)) * 10)
         test_noise = gen_noisy_batch(args, clip_embeddings)
         test_noise = test_noise.cuda()
-        test_img_syn = (generator(test_noise) + 1.0) / 2.0
+        test_img_syn = (generator(test_noise))
         test_img_syn = make_grid(test_img_syn, nrow=10)
         save_image(
             test_img_syn,
