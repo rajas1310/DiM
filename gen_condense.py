@@ -23,6 +23,8 @@ from utils import AverageMeter, accuracy, Normalize, Logger, rand_bbox
 from augment import DiffAug
 from data import get_pacs_datasets
 
+from all_models import get_model
+
 def str2bool(v):
     """Cast string to boolean"""
     if isinstance(v, bool):
@@ -145,42 +147,42 @@ def load_data(args):
     return trainloader, testloader
 
 
-def define_model(args, num_classes, e_model=None):
-    """Obtain model for training and validating"""
-    if e_model:
-        model = e_model
-    else:
-        model = args.match_model
+# def define_model(args, num_classes, e_model=None):
+#     """Obtain model for training and validating"""
+#     if e_model:
+#         model = e_model
+#     else:
+#         model = args.match_model
 
-    if args.data == "mnist" or args.data == "fashion":
-        nch = 1
-    else:
-        nch = 3
+#     if args.data == "mnist" or args.data == "fashion":
+#         nch = 1
+#     else:
+#         nch = 3
 
-    if model == "convnet":
-        return CN.ConvNet(num_classes, channel=nch)
-    elif model == "resnet10":
-        return RN.ResNet(args.data, 10, num_classes, nch=nch)
-    elif model == "resnet18":
-        return RN.ResNet(args.data, 18, num_classes, nch=nch)
-    elif model == "resnet34":
-        return RN.ResNet(args.data, 34, num_classes, nch=nch)
-    elif model == "resnet50":
-        return RN.ResNet(args.data, 50, num_classes, nch=nch)
-    elif model == "resnet101":
-        return RN.ResNet(args.data, 101, num_classes, nch=nch)
-    elif model == "resnet10_ap":
-        return RNAP.ResNetAP(args.data, 10, num_classes, nch=nch)
-    elif model == "resnet18_ap":
-        return RNAP.ResNetAP(args.data, 18, num_classes, nch=nch)
-    elif model == "resnet34_ap":
-        return RNAP.ResNetAP(args.data, 34, num_classes, nch=nch)
-    elif model == "resnet50_ap":
-        return RNAP.ResNetAP(args.data, 50, num_classes, nch=nch)
-    elif model == "resnet101_ap":
-        return RNAP.ResNetAP(args.data, 101, num_classes, nch=nch)
-    elif model == "densenet":
-        return DN.densenet_cifar(num_classes)
+#     if model == "convnet":
+#         return CN.ConvNet(num_classes, channel=nch)
+#     elif model == "resnet10":
+#         return RN.ResNet(args.data, 10, num_classes, nch=nch)
+#     elif model == "resnet18":
+#         return RN.ResNet(args.data, 18, num_classes, nch=nch)
+#     elif model == "resnet34":
+#         return RN.ResNet(args.data, 34, num_classes, nch=nch)
+#     elif model == "resnet50":
+#         return RN.ResNet(args.data, 50, num_classes, nch=nch)
+#     elif model == "resnet101":
+#         return RN.ResNet(args.data, 101, num_classes, nch=nch)
+#     elif model == "resnet10_ap":
+#         return RNAP.ResNetAP(args.data, 10, num_classes, nch=nch)
+#     elif model == "resnet18_ap":
+#         return RNAP.ResNetAP(args.data, 18, num_classes, nch=nch)
+#     elif model == "resnet34_ap":
+#         return RNAP.ResNetAP(args.data, 34, num_classes, nch=nch)
+#     elif model == "resnet50_ap":
+#         return RNAP.ResNetAP(args.data, 50, num_classes, nch=nch)
+#     elif model == "resnet101_ap":
+#         return RNAP.ResNetAP(args.data, 101, num_classes, nch=nch)
+#     elif model == "densenet":
+#         return DN.densenet_cifar(num_classes)
 
 
 def calc_gradient_penalty(args, discriminator, img_real, img_syn):
@@ -381,7 +383,8 @@ def validate(args, generator, testloader, criterion, aug_rand, clip_embeddings):
     all_best_top5 = []
     for e_model in args.eval_model:
         print("Evaluating {}".format(e_model))
-        model = define_model(args, args.num_classes, e_model).cuda()
+        # model = define_model(args, args.num_classes, e_model).cuda()
+        model = get_model(e_model, args.num_classes).cuda()
         model.train()
         optim_model = torch.optim.SGD(
             model.parameters(),
@@ -465,12 +468,12 @@ if __name__ == "__main__":
     parser.add_argument("--ipc", type=int, default=50)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=150)
-    parser.add_argument("--epochs-eval", type=int, default=1000)
+    parser.add_argument("--epochs-eval", type=int, default=50)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--eval-lr", type=float, default=0.01)
     parser.add_argument("--momentum", type=float, default=0.9)
     parser.add_argument("--weight-decay", type=float, default=5e-4)
-    parser.add_argument("--eval-model", type=str, nargs="+", default=["convnet"])
+    parser.add_argument("--eval-model", type=str, nargs="+", default=["efficientnet_b0"])
     parser.add_argument("--dim-noise", type=int, default=768)  # 512 + 256
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--print-freq", type=int, default=50)
