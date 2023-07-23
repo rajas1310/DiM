@@ -469,10 +469,10 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--epochs", type=int, default=150)
     parser.add_argument("--epochs-eval", type=int, default=50)
-    parser.add_argument("--lr", type=float, default=1e-4)
-    parser.add_argument("--eval-lr", type=float, default=0.01)
+    parser.add_argument("--lr", type=float, default=1e-4) # 
+    parser.add_argument("--eval-lr", type=float, default=3e-4) #0.01
     parser.add_argument("--momentum", type=float, default=0.9)
-    parser.add_argument("--weight-decay", type=float, default=5e-4)
+    parser.add_argument("--weight-decay", type=float, default=1e-5) # 5e-4
     parser.add_argument("--eval-model", type=str, nargs="+", default=["efficientnet_b0"])
     parser.add_argument("--dim-noise", type=int, default=768)  # 512 + 256
     parser.add_argument("--num-workers", type=int, default=4)
