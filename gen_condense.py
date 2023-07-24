@@ -58,8 +58,8 @@ def gen_noisy_batch(args, clip_embeddings):
 
     assert len(embeddings) == args.batch_size    
     embeddings = torch.stack((embeddings))
-    noise = torch.normal(0, 1, (args.batch_size, args.dim_noise - 512))
-    noisy_vectors_batch = torch.cat((embeddings, noise), 1)
+    noise = torch.normal(torch.mean(embeddings).item(), torch.std(embeddings).item() / 10., size=(args.batch_size, 512))
+    noisy_vectors_batch = embeddings + noise
     return noisy_vectors_batch
 
 def load_data(args):
@@ -474,7 +474,7 @@ if __name__ == "__main__":
     parser.add_argument("--momentum", type=float, default=0.9)
     parser.add_argument("--weight-decay", type=float, default=1e-5) # 5e-4
     parser.add_argument("--eval-model", type=str, nargs="+", default=["efficientnet_b0"])
-    parser.add_argument("--dim-noise", type=int, default=768)  # 512 + 256
+    parser.add_argument("--dim-noise", type=int, default=512)  # 512 + 256
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--print-freq", type=int, default=50)
     parser.add_argument("--eval-interval", type=int, default=10)
