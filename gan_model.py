@@ -165,18 +165,14 @@ class Generator(nn.Module):
             nn.ReLU(True),
             # out: 64 x 32 x 32
 
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=1, bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(True),
                        
             # out: 64 x 64 x 64
-
-            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1, bias=False),
-            nn.BatchNorm2d(64),
-            nn.ReLU(True),
-            # out: 64 x 128 x 128
             
             nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1, bias=False),
+            # out: 3 x 128 x 128
             nn.Tanh()
             
         )
