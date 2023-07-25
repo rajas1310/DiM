@@ -143,147 +143,62 @@ class Generator(nn.Module):
 
     def __init__(self, dim_noise):
         super(Generator, self).__init__()
-        self.fc1 = nn.Linear(dim_noise, 196*4*4) ########## Change back to args.dim_noise
-        self.bn0 = nn.BatchNorm1d(196*4*4)
-        self.relu0 = nn.ReLU()
+        self.gen = nn.Sequential(
+            # in: latent_size x 1 x 1
+            nn.ConvTranspose2d(dim_noise, 512, kernel_size=4, stride=1, padding=0, bias=False),
+            nn.BatchNorm2d(512),
+            nn.ReLU(True),
+            # out: 512 x 4 x 4
+        
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(256),
+            nn.ReLU(True),
+            # out: 256 x 8 x 8
+        
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(128),
+            nn.ReLU(True),
+            # out: 128 x 16 x 16
+        
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(True),
+            # out: 64 x 32 x 32
 
-        # if args.data == 'mnist' or args.data == 'fashion':
-        #     self.conv1 = nn.ConvTranspose2d(196, 196, kernel_size=3, stride=2, padding=1)
-        # else:
-        self.conv1 = nn.ConvTranspose2d(196, 196, kernel_size=4, stride=2, padding=1)
-        self.bn1 = nn.BatchNorm2d(196)
-        self.relu1 = nn.ReLU()
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(True),
+                       
+            # out: 64 x 64 x 64
 
-        self.conv2 = nn.Conv2d(196, 196, kernel_size=3, stride=1, padding=1)
-        self.bn2 = nn.BatchNorm2d(196)
-        self.relu2 = nn.ReLU()
-
-        self.conv3 = nn.Conv2d(196, 196, kernel_size=3, stride=1, padding=1)
-        self.bn3 = nn.BatchNorm2d(196)
-        self.relu3 = nn.ReLU()
-
-        self.conv4 = nn.Conv2d(196, 196, kernel_size=3, stride=1, padding=1)
-        self.bn4 = nn.BatchNorm2d(196)
-        self.relu4 = nn.ReLU()
-
-        #if args.data == 'mnist':
-        #    self.conv5 = nn.ConvTranspose2d(196, 196, kernel_size=3, stride=2, padding=1)
-        #else:
-        self.conv5 = nn.ConvTranspose2d(196, 196, kernel_size=4, stride=2, padding=1)
-        self.bn5 = nn.BatchNorm2d(196)
-        self.relu5 = nn.ReLU()
-
-        self.conv6 = nn.Conv2d(196, 196, kernel_size=3, stride=1, padding=1)
-        self.bn6 = nn.BatchNorm2d(196)
-        self.relu6 = nn.ReLU()
-
-        self.conv7 = nn.ConvTranspose2d(196, 196, kernel_size=4, stride=2, padding=1)
-        self.bn7 = nn.BatchNorm2d(196)
-        self.relu7 = nn.ReLU()
-
-        self.conv8 = nn.ConvTranspose2d(196, 196, kernel_size=4, stride=2, padding=1)
-        self.bn8 = nn.BatchNorm2d(196)
-        self.relu8 = nn.ReLU()
-
-        self.conv9 = nn.ConvTranspose2d(196, 196, kernel_size=4, stride=2, padding=1)
-        self.bn9 = nn.BatchNorm2d(196)
-        self.relu9 = nn.ReLU()
-
-        # if args.data == 'mnist' or args.data == 'fashion':
-        #     self.conv8 = nn.Conv2d(196, 1, kernel_size=3, stride=1, padding=1)
-        # else:
-        self.conv_last = nn.Conv2d(196, 3, kernel_size=3, stride=1, padding=1)
-        # bn and relu are not applied after conv8
-
-        self.sigmoid = nn.Sigmoid()
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(True),
+            # out: 64 x 128 x 128
+            
+            nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.Tanh()
+            
+        )
+        self.dim_noise = dim_noise
 
     def forward(self, x, print_size=False):
         if print_size:
             print("input size: {}".format(x.size()))
 
-        x = self.fc1(x)
-        x = self.bn0(x)
-        x = self.relu0(x)
+        # x = self.fc1(x)
+        # x = self.bn0(x)
+        # x = self.relu0(x)
 
         if print_size:
             print(x.size())
 
-        x = x.view(-1, 196, 4, 4)
-
-        if print_size:
-            print(x.size())
-
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu1(x)
-
-        if print_size:
-            print(x.size())
-
-        x = self.conv2(x)
-        x = self.bn2(x)
-        x = self.relu2(x)
-
-        if print_size:
-            print(x.size())
-
-        x = self.conv3(x)
-        x = self.bn3(x)
-        x = self.relu3(x)
-
-        if print_size:
-            print(x.size())
-
-        x = self.conv4(x)
-        x = self.bn4(x)
-        x = self.relu4(x)
-
-        if print_size:
-            print(x.size())
-
-        x = self.conv5(x)
-        x = self.bn5(x)
-        x = self.relu5(x)
-
-        if print_size:
-            print(x.size())
-
-        x = self.conv6(x)
-        x = self.bn6(x)
-        x = self.relu6(x)
-
-        if print_size:
-            print(x.size())
-
-        x = self.conv7(x)
-        x = self.bn7(x)
-        x = self.relu7(x)
+        x = x.view(-1, self.dim_noise, 1, 1)
 
         if print_size:
             print(x.size())
         
-        x = self.conv8(x)
-        x = self.bn8(x)
-        x = self.relu8(x)
-
-        if print_size:
-            print(x.size())
-
-        x = self.conv9(x)
-        x = self.bn9(x)
-        x = self.relu9(x)
-
-        if print_size:
-            print(x.size())
-
-        # x = self.conv8(x)
-        # bn and relu are not applied after conv8
-
-        if print_size:
-            print(x.size())
-
-        x = self.conv_last(x)
-        x = self.sigmoid(x)
+        x = self.gen(x)
 
         if print_size:
             print("output size: {}".format(x.size()))
