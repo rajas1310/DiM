@@ -70,7 +70,7 @@ def gen_noisy_batch(args, clip_embeddings, label_batch=None):
       domains = ["p", "a", "c", "s"]
       domains.pop(domains.index(args.holdout_domain))
       for cls in label_batch:
-        dom = domain_to_foldername[random.sample(domains, 1)]
+        dom = domain_to_foldername[random.sample(domains, 1)[0]]
         cls_name = int2label[cls]
         key = f"a {dom} of a {cls_name}"
         embeddings.append(clip_embeddings[key])
