@@ -36,9 +36,19 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError("Boolean value expected.")
 
-def gen_noisy_batch(args, clip_embeddings):
+def gen_noisy_batch(args, clip_embeddings, label_batch=None):
     # hold_out_domain : 'p', 'a', 'c', 's' 
     # clip_embeddings : dict
+    int2label = {
+           0 : "dog",
+           1 : "elephant",
+           2 : "giraffe",
+           3 : "guitar",
+           4 : "horse",
+           5 : "house",
+           6 : "person"
+        }
+
     domain_to_foldername = {
             "p": "photo",
             "a": "painting",
@@ -49,12 +59,21 @@ def gen_noisy_batch(args, clip_embeddings):
     embeddings = []
     keys = clip_embeddings.keys()    # key = f"a {DOMAIN} of a {CLASS}"
 
-    while count != args.batch_size:
-        key = random.sample(keys, 1)[0]
-        if key.split(" ")[1] != domain_to_foldername[args.holdout_domain]:
-            # print(key)
-            count += 1
-            embeddings.append(clip_embeddings[key])
+    if label_batch == None:
+      while count != args.batch_size:
+          key = random.sample(keys, 1)[0]
+          if key.split(" ")[1] != domain_to_foldername[args.holdout_domain]:
+              # print(key)
+              count += 1
+              embeddings.append(clip_embeddings[key])
+    else:
+      domains = ["p", "a", "c", "s"]
+      domains.pop(domains.index(args.holdout_domain))
+      for cls in label_batch:
+        dom = domain_to_foldername[random.sample(domains, 1)]
+        cls_name = int2label[cls]
+        key = f"a {dom} of a {cls_name}"
+        embeddings.append(clip_embeddings[key])
 
     assert len(embeddings) == args.batch_size    
     embeddings = torch.stack((embeddings))
@@ -309,7 +328,7 @@ def train(
         # noise[torch.arange(args.batch_size), : args.num_classes] = lab_onehot[
         #     torch.arange(args.batch_size)
         # ]
-        noise = gen_noisy_batch(args, clip_embeddings)
+        noise = gen_noisy_batch(args, clip_embeddings, lab_syn)
         noise = noise.cuda()
         lab_syn = lab_syn.cuda()
 
