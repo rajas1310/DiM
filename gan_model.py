@@ -199,6 +199,7 @@ class Generator(nn.Module):
         if print_size:
             print("output size: {}".format(x.size()))
 
+        x = (x + 1.) / 2.
         return x
 
 
