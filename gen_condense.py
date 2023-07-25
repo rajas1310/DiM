@@ -58,7 +58,7 @@ def gen_noisy_batch(args, clip_embeddings):
 
     assert len(embeddings) == args.batch_size    
     embeddings = torch.stack((embeddings))
-    noise = torch.normal(torch.mean(embeddings).item(), torch.std(embeddings).item() / 10., size=(args.batch_size, 512))
+    noise = torch.normal(0, torch.std(embeddings).item() / 100., size=(args.batch_size, 512))
     noisy_vectors_batch = embeddings + noise
     return noisy_vectors_batch
 
