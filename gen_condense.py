@@ -422,7 +422,7 @@ def validate(args, generator, testloader, criterion, aug_rand, clip_embeddings):
             for batch_idx in range(10 * args.ipc // args.batch_size + 1):
                 # obtain pseudo samples with the generator
                 lab_syn = torch.randint(args.num_classes, (args.batch_size,))
-                noise = noise = gen_noisy_batch(args, clip_embeddings)
+                noise = noise = gen_noisy_batch(args, clip_embeddings, lab_syn)
                 noise = noise.cuda()
                 lab_syn = lab_syn.cuda()
 
