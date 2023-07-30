@@ -306,7 +306,7 @@ def train(
         optim_g.zero_grad()
 
         # obtain the noise with one-hot class labels
-        noise = gen_noisy_batch(args, clip_embeddings)
+        noise = gen_noisy_batch(args, clip_embeddings, lab_real)
         noise = noise.cuda()
 
         img_syn = generator(noise)
@@ -580,7 +580,7 @@ if __name__ == "__main__":
         # save image for visualization
         generator.eval()
         test_label = torch.tensor(list(range(args.num_classes)) * 10)
-        test_noise = gen_noisy_batch(args, clip_embeddings)
+        test_noise = gen_noisy_batch(args, clip_embeddings, test_label)
         test_noise = test_noise.cuda()
         test_img_syn = (generator(test_noise))
         test_img_syn = make_grid(test_img_syn, nrow=10)
