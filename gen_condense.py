@@ -1,3 +1,4 @@
+
 import os
 import sys
 import time
@@ -18,7 +19,7 @@ import models.resnet as RN
 import models.convnet as CN
 import models.resnet_ap as RNAP
 import models.densenet_cifar as DN
-from gan_model import Generator, Discriminator
+from gan_model import Generator, Discriminator, DomainClassAwareGenerator
 from utils import AverageMeter, accuracy, Normalize, Logger, rand_bbox
 from augment import DiffAug
 from data import get_pacs_datasets
@@ -277,6 +278,36 @@ def diffaug(args, device="cuda"):
     return aug_batch, aug_rand
 
 
+def get_class_embeddings(cls_idxs, clip_embeddings):
+  int2label = {
+           0 : "dog",
+           1 : "elephant",
+           2 : "giraffe",
+           3 : "guitar",
+           4 : "horse",
+           5 : "house",
+           6 : "person"
+        }
+  embeddings = []
+  for idx in cls_idxs:
+    embeddings.append(clip_embeddings[int2label[idx.cpu().item()]])
+  embeddings = torch.stack(embeddings)
+  return embeddings
+
+def get_domain_embeddings(dom_keys, clip_embeddings):
+  domain_to_foldername = {
+          "p": "photo",
+          "a": "painting",
+          "c": "cartoon",
+          "s": "sketch"
+      }
+  embeddings = []
+#   print(clip_embeddings.keys())
+  for key in dom_keys:
+    embeddings.append(clip_embeddings[domain_to_foldername[key]])
+  embeddings = torch.stack(embeddings)
+  return embeddings
+
 def train(
     args,
     epoch,
@@ -306,10 +337,18 @@ def train(
         optim_g.zero_grad()
 
         # obtain the noise with one-hot class labels
-        noise = gen_noisy_batch(args, clip_embeddings, lab_real)
-        noise = noise.cuda()
+        # noise = gen_noisy_batch(args, clip_embeddings)
+        # noise = noise.cuda()
 
-        img_syn = generator(noise)
+        domains = ["p", "a", "c", "s"]
+        domains.pop(domains.index(args.holdout_domain))
+
+        random_domains = random.choices(domains, weights = [1] * len(domains) , k = args.batch_size)
+
+        domain_embed = get_domain_embeddings(random_domains, clip_embeddings).cuda()
+        clas_embed = get_class_embeddings(lab_real, clip_embeddings).cuda()
+
+        img_syn = generator(domain_embed, clas_embed)
         gen_source, gen_class = discriminator(img_syn)
         gen_source = gen_source.mean()
         gen_class = criterion(gen_class, lab_real)
@@ -328,12 +367,16 @@ def train(
         # noise[torch.arange(args.batch_size), : args.num_classes] = lab_onehot[
         #     torch.arange(args.batch_size)
         # ]
-        noise = gen_noisy_batch(args, clip_embeddings, lab_syn)
-        noise = noise.cuda()
+        # noise = gen_noisy_batch(args, clip_embeddings, lab_syn)
+        # noise = noise.cuda()
         lab_syn = lab_syn.cuda()
+        random_domains = random.choices(domains, weights = [1] * len(domains) , k = args.batch_size)
+
+        domain_embed = get_domain_embeddings(random_domains, clip_embeddings).cuda()
+        clas_embed = get_class_embeddings(lab_syn, clip_embeddings).cuda()
 
         with torch.no_grad():
-            img_syn = generator(noise)
+            img_syn = generator(domain_embed, clas_embed)
 
         disc_fake_source, disc_fake_class = discriminator(img_syn)
         disc_fake_source = disc_fake_source.mean()
@@ -421,13 +464,22 @@ def validate(args, generator, testloader, criterion, aug_rand, clip_embeddings):
         for epoch_idx in range(args.epochs_eval):
             for batch_idx in range(10 * args.ipc // args.batch_size + 1):
                 # obtain pseudo samples with the generator
+
                 lab_syn = torch.randint(args.num_classes, (args.batch_size,))
-                noise = noise = gen_noisy_batch(args, clip_embeddings, lab_syn)
-                noise = noise.cuda()
                 lab_syn = lab_syn.cuda()
 
+                domains = ["p", "a", "c", "s"]
+                domains.pop(domains.index(args.holdout_domain))
+
+                random_domains = random.choices(domains, weights = [1] * len(domains) , k = args.batch_size)
+
+                domain_embed = get_domain_embeddings(random_domains, clip_embeddings).cuda()
+                clas_embed = get_class_embeddings(lab_syn, clip_embeddings).cuda()
+
+                
+
                 with torch.no_grad():
-                    img_syn = generator(noise)
+                    img_syn = generator(domain_embed, clas_embed)
                     img_syn = aug_rand(img_syn)
 
                 if np.random.rand(1) < args.mix_p and args.mixup_net == "cut":
@@ -493,7 +545,7 @@ if __name__ == "__main__":
     parser.add_argument("--momentum", type=float, default=0.9)
     parser.add_argument("--weight-decay", type=float, default=1e-5) # 5e-4
     parser.add_argument("--eval-model", type=str, nargs="+", default=["efficientnet_b0"])
-    parser.add_argument("--dim-noise", type=int, default=512)  # 512 + 256
+    parser.add_argument("--dim-noise", type=int, default=768)  # 512 + 256
     parser.add_argument("--num-workers", type=int, default=4)
     parser.add_argument("--print-freq", type=int, default=50)
     parser.add_argument("--eval-interval", type=int, default=10)
@@ -506,7 +558,7 @@ if __name__ == "__main__":
         help="Must be one of `p`,`a`,`c`,`s` ",
     )
     parser.add_argument("--num-classes", type=int, default=7)
-    parser.add_argument('--clip-embeddings', type=str, default='./DiM/embeds/pacs/clip_embeddings.pickle')
+    parser.add_argument('--clip-embeddings', type=str, default='./DiM/embeds/pacs/clip_class_domain_embeddings.pickle')
     parser.add_argument("--data-dir", type=str, default="./data/PACS")
     parser.add_argument("--output-dir", type=str, default="./results/")
     parser.add_argument("--logs-dir", type=str, default="./logs/")
@@ -547,7 +599,7 @@ if __name__ == "__main__":
 
     trainloader, testloader = load_data(args)
 
-    generator = Generator(args.dim_noise).cuda()
+    generator = DomainClassAwareGenerator(args.dim_noise).cuda()
     discriminator = Discriminator(args.num_classes).cuda()
 
     optim_g = torch.optim.Adam(generator.parameters(), lr=args.lr, betas=(0, 0.9))
@@ -580,9 +632,16 @@ if __name__ == "__main__":
         # save image for visualization
         generator.eval()
         test_label = torch.tensor(list(range(args.num_classes)) * 10)
-        test_noise = gen_noisy_batch(args, clip_embeddings, test_label)
-        test_noise = test_noise.cuda()
-        test_img_syn = (generator(test_noise))
+        domains = ["p", "a", "c", "s"]
+        domains.pop(domains.index(args.holdout_domain))
+
+        random_domains = random.choices(domains, weights=[1] * len(domains) , k=len(test_label))
+
+        domain_embed = get_domain_embeddings(random_domains, clip_embeddings).cuda()
+        clas_embed = get_class_embeddings(test_label, clip_embeddings).cuda()
+
+        
+        test_img_syn = (generator(domain_embed, clas_embed))
         test_img_syn = make_grid(test_img_syn, nrow=10)
         save_image(
             test_img_syn,

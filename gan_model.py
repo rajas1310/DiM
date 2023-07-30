@@ -1,3 +1,4 @@
+
 # This code is based on the code provided in https://github.com/richardkxu/GANs-on-CIFAR10.
 
 import torch
@@ -18,8 +19,6 @@ class Discriminator(nn.Module):
         self.conv1 = nn.Conv2d(3, 196, kernel_size=3, stride=1, padding=1)
         size = 128
         
-        
-
         self.ln1 = nn.LayerNorm(normalized_shape=[196, size, size])
         self.lrelu1 = nn.LeakyReLU()
 
@@ -140,7 +139,6 @@ class Discriminator(nn.Module):
 
 
 class Generator(nn.Module):
-
     def __init__(self, dim_noise):
         super(Generator, self).__init__()
         self.gen = nn.Sequential(
@@ -201,6 +199,81 @@ class Generator(nn.Module):
 
         x = (x + 1.) / 2.
         return x
+
+
+class DomainClassAwareGenerator(nn.Module):
+        
+    def __init__(self, dim_noise):
+        super(DomainClassAwareGenerator, self).__init__()
+
+        self.domain = nn.Linear(dim_noise, dim_noise)
+        self.clas = nn.Linear(dim_noise, dim_noise)
+
+        self.gen = nn.Sequential(
+            # in: latent_size x 1 x 1
+            nn.ConvTranspose2d(3 * dim_noise, 512, kernel_size=4, stride=1, padding=0, bias=False),
+            nn.BatchNorm2d(512),
+            nn.ReLU(True),
+            # out: 512 x 4 x 4
+        
+            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(256),
+            nn.ReLU(True),
+            # out: 256 x 8 x 8
+        
+            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(128),
+            nn.ReLU(True),
+            # out: 128 x 16 x 16
+        
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(True),
+            # out: 64 x 32 x 32
+
+            nn.ConvTranspose2d(64, 64, kernel_size=4, stride=2, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(True),
+                       
+            # out: 64 x 64 x 64
+            
+            nn.ConvTranspose2d(64, 3, kernel_size=4, stride=2, padding=1, bias=False),
+            # out: 3 x 128 x 128
+            nn.Tanh()
+            
+        )
+        self.dim_noise = dim_noise
+
+    def forward(self, domain_embed, clas_embed, print_size=False):
+        if print_size:
+            print("input size: {}".format(x.size()))
+
+        domain_latent = self.domain(domain_embed)
+        clas_latent = self.clas(clas_embed)
+
+        noise = torch.normal(0, torch.std((domain_embed + clas_embed) / 2.).item() / 100., size=domain_embed.size()).cuda()
+
+        x = torch.concat([domain_latent, clas_latent, noise], dim=-1)
+        # x = self.fc1(x)
+        # x = self.bn0(x)
+        # x = self.relu0(x)
+
+        if print_size:
+            print(x.size())
+
+        x = x.view(-1, 3 * self.dim_noise, 1, 1)
+
+        if print_size:
+            print(x.size())
+        
+        x = self.gen(x)
+
+        if print_size:
+            print("output size: {}".format(x.size()))
+
+        x = (x + 1.) / 2.
+        return x
+
 
 
 if __name__ == '__main__':
